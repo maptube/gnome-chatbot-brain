@@ -9,8 +9,9 @@ import tensorflow as tf
 #based on Google's word2vec_basic.py example - works a lot better than the gensim version (why?)
 class TFWord2Vec:
     def __init__(self):
+        #todo: need an assert that vocab size < num distinct words
         self.vocabulary_size = 50000
-        # self.vocabulary_size = 13000
+        #self.vocabulary_size = 13000
 
         self.data_index = 0
 
@@ -210,3 +211,16 @@ class TFWord2Vec:
             return self.final_embeddings
 
 ######################################################################################################################
+
+    def cosine_similarity(self,w1,w2):
+        """
+        Returns the cosine similarity between two word vectors
+        :param w1: string first word
+        :param w2: string second word
+        :return: cosine similarity between w1 and w2
+        """
+        w1v = self.final_embeddings[self.dictionary[w1]]
+        w2v = self.final_embeddings[self.dictionary[w2]]
+        cosine_similarity = np.dot(w1v, w2v) / (np.linalg.norm(w1v) * np.linalg.norm(w2v))
+
+        return cosine_similarity
