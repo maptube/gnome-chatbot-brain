@@ -83,7 +83,7 @@ class WordEmbeddings:
         # text8 = batchWordsToSentences(words,10)
         # debugPrintRandomSentences(text8, 10)
         text8 = gs.models.word2vec.Text8Corpus(
-            'data/text8/text8')  # NOTE: this splits the one lne text 8 into 8192 character blocks of words
+            'data/text8/text8')  # NOTE: this splits the one line text 8 into 8192 character blocks of words
         model = gs.models.Word2Vec(text8, size=100, window=5, min_count=5, workers=8, sg=1, hs=1, iter=5)
         return model
 

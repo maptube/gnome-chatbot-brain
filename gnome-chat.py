@@ -23,6 +23,9 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
 from tfword2vec import TFWord2Vec
+from wordembeddings import WordEmbeddings
+from seq2seq import Seq2Seq
+
 
 creatureNames = ['Parker', 'Wombat', 'Loki', 'Gnomeo', 'Jetpack Gnomey', 'Super Gnome', 'Yusuf',
                      'Denchu', 'Zack', 'Khadija',
@@ -164,6 +167,11 @@ def compute_unigramProbabilities(wordcount):
 #skipgrams
 
 
+######################################################################################################
+
+#def filterWord(w):
+
+
 
 ######################################################################################################
 
@@ -174,6 +182,7 @@ def makeWordFile(infiles,outfile):
     :param outfilename:
     :return:
     """
+    #NOTE: you can do this: count = collections.Counter(words).most_common()
     count=0
     with open(outfile,'wt') as wordfile:
         for filename in infiles:
@@ -222,11 +231,82 @@ def makeWordFile(infiles,outfile):
 #    """
 #    return tokenize.sent_tokenize(p)
 
+######################################################################################################
 
 
+def trainWordEmbeddings(outFilename):
+    """train a word vector embedding which we save for later"""
 
+    corpus_hhgttg = "data\\hhgttg.txt"
+    corpus_fish = "data\\fish.txt"
+    corpus_life = "data\\life.txt"
+    corpus_rest = "data\\rest.txt"
+    corpus_harmless = "data\\harmless.txt"
 
+    # loadData(infilename)
+    # compute_unigramProbabilities()
 
+    # makeWordFile([corpus_hhgttg, corpus_fish, corpus_life, corpus_rest, corpus_harmless],'hhgttg_words.txt')
+    # wordcounts = wordCountFromPlainTextFile('hhgttg_words.txt')
+    # print("distinct words = ",len(wordcounts.keys()))
+
+    we = WordEmbeddings()
+    model = we.makeText8Embedding() #using gensim
+    model.save(outFilename)
+
+    #other versions here in case we want to do a test
+    # on hhgttg
+    # model = gensimWord2Vec([corpus_hhgttg, corpus_fish, corpus_life, corpus_rest, corpus_harmless])
+    # Tensorflow word2vec
+    # tfword2vec = tfWord2Vec('data/text8.zip')
+    # tfword2vec = tfWord2Vec('data/hhgttg_words.zip')
+
+    # now some similarity checks
+    print("woman, man: ", model.wv.similarity('woman', 'man'))
+    print("life, universe: ", model.wv.similarity('life', 'universe'))
+    print("life, everything: ", model.wv.similarity('life', 'everything'))
+    print("universe, everything: ", model.wv.similarity('universe', 'everything'))
+    print("england, london: ", model.wv.similarity('england', 'london'))
+    print("france, paris: ", model.wv.similarity('france', 'paris'))
+    print("greece, athens: ", model.wv.similarity('greece', 'athens'))
+    print("would, will: ", model.wv.similarity('would', 'will'))
+
+    return model
+
+def trainChatbot(model,inFilename):
+    """Train a chatbot using a word embedding and a file containing [context, "pattern"] tuples"""
+    #model is a gensim word2vec model with 100 vector words
+    #inFile:
+    #   NAME, "my name is $NAME$"
+
+    #load the training data
+    #data = dict()
+    #with open(inFilename, 'rt') as csvfile:
+    #    csvreader = csv.reader(csvfile, delimiter=',', quotechar='"')
+    #    for row in csvreader:
+    #        ctx = row[0]
+    #        pattern = row[1]
+    #        print("trainChatbot:",ctx,pattern)
+    #        if ctx in data:
+    #            data[ctx].append(pattern)
+    #        else:
+    #            data[ctx]=[pattern]
+
+    #print("Found ",len(data.keys())," chatbot contexts")
+
+    print("Begin training")
+    seq2seq = Seq2Seq()
+    text = ('long ago , the mice had a general council to consider what measures they could take to outwit their '
+    'common enemy , the cat . some said this , and some said that but at last a young mouse got up and said he had '
+    'a proposal to make , which he thought would meet the case . you will all agree , said he , that our chief danger '
+    'consists in the sly and treacherous manner in which the enemy approaches us . now , if we could receive some '
+    'signal of her approach , we could easily escape from her . i venture , therefore , to propose that a small bell '
+    'be procured , and attached by a ribbon round the neck of the cat . by this means we should always know when she '
+    'was about , and could easily retire while she was in the neighbourhood . this proposal met with general applause '
+    ', until an old mouse got up and said that is all very well , but who is to bell the cat ? the mice looked at one '
+    'another and nobody spoke . then the old mouse said it is easy to propose impossible remedies .')
+    #seq2seq.trainLMTest(text.split()) #note words passed in are an array of words
+    seq2seq.trainLMEmbedding(model, text.split())
 
 
 
@@ -238,52 +318,24 @@ def main():
     #infilename = "C:\\Users\\richard\\Dropbox\\SIGCHI\\conversations.csv"
     infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171101_conversations\\conversations_sep.csv"
     ##
-    corpus_hhgttg = "data\\hhgttg.txt"
-    corpus_fish = "data\\fish.txt"
-    corpus_life = "data\\life.txt"
-    corpus_rest = "data\\rest.txt"
-    corpus_harmless = "data\\harmless.txt"
-
-    #loadData(infilename)
-    #compute_unigramProbabilities()
-
-    #makeWordFile([corpus_hhgttg, corpus_fish, corpus_life, corpus_rest, corpus_harmless],'hhgttg_words.txt')
-    #wordcounts = wordCountFromPlainTextFile('hhgttg_words.txt')
-    #print("distinct words = ",len(wordcounts.keys()))
-
-    ##
-
-    #gensim model
-
-    #on hhgttg
-    #model = gensimWord2Vec([corpus_hhgttg, corpus_fish, corpus_life, corpus_rest, corpus_harmless])
-
-
-    #now some similarity checks
-    print("woman, man: ",model.wv.similarity('woman', 'man'))
-    print("life, universe: ", model.wv.similarity('life', 'universe'))
-    print("life, everything: ", model.wv.similarity('life', 'everything'))
-    print("universe, everything: ", model.wv.similarity('universe', 'everything'))
-    print("england, london: ", model.wv.similarity('england', 'london'))
-    print("france, paris: ", model.wv.similarity('france', 'paris'))
-    print("greece, athens: ", model.wv.similarity('greece', 'athens'))
-    print("would, will: ", model.wv.similarity('would', 'will'))
 
 
     ##
 
-    #Tensorflow word2vec
-    #tfword2vec = tfWord2Vec('data/text8.zip')
-    #tfword2vec = tfWord2Vec('data/hhgttg_words.zip')
-    #now some similarity checks
-    #print("woman, man: ",tfword2vec.cosine_similarity('woman','man'))
-    #print("life, universe: ", tfword2vec.cosine_similarity('life', 'universe'))
-    #print("life, everything: ", tfword2vec.cosine_similarity('life', 'everything'))
-    #print("universe, everything: ", tfword2vec.cosine_similarity('universe', 'everything'))
-    #print("england, london: ", tfword2vec.cosine_similarity('england', 'london'))
-    #print("france, paris: ", tfword2vec.cosine_similarity('france', 'paris'))
-    #print("greece, athens: ", tfword2vec.cosine_similarity('greece', 'athens'))
-    #print("would, will: ", tfword2vec.cosine_similarity('would', 'will'))
+    #Train the language model on words - this is using the text8 corpus
+    #model = trainWordEmbeddings('lm/gensim-text8.model')
+
+    #Training
+    model = gs.models.Word2Vec.load('lm/gensim-text8.model')
+    trainChatbot(model,'lm/trainingchat.csv')
+
+
+
+
+
+
+
+
 
 
 ###############################################################################
