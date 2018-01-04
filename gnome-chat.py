@@ -24,7 +24,8 @@ import matplotlib.pyplot as plt
 
 from tfword2vec import TFWord2Vec
 from wordembeddings import WordEmbeddings
-from seq2seq import Seq2Seq
+#from seq2seq import Seq2Seq
+import seq2seq as s2s
 
 
 creatureNames = ['Parker', 'Wombat', 'Loki', 'Gnomeo', 'Jetpack Gnomey', 'Super Gnome', 'Yusuf',
@@ -55,7 +56,8 @@ conversations = []
 
 class ConversationLine:
     """One line of the conversation"""
-    def __init__(self, speaker, text):
+    def __init__(self, cid, speaker, text):
+        self.cid = cid
         self.speaker = speaker
         self.text = text;
 
@@ -83,7 +85,7 @@ def loadGnomeData(infile):
                 conversations.append(conversation)
                 conversation=[] #start a new conversation
             lastcid=cid
-            conversation.append(ConversationLine(name,text))
+            conversation.append(ConversationLine(cid,name,text))
         #don't forget to push the last conversation in the file...
         conversations.append(conversation)
 
@@ -172,6 +174,38 @@ def compute_unigramProbabilities(wordcount):
 #def filterWord(w):
 
 
+######################################################################################################
+
+
+def conditionGnomeChat(inFilename, outFilename):
+    """
+    Read in the gnome chat data that we collected (csv file) and generate gnome/visitor pairs of sentences.
+    The raw data splits gnome lines over multiple lines, which we stick back together here and add <SOC> <EOC>
+    start and end of conversation markers. Inside this we also add <SOT> and <EOT> markers for each speaker's
+    start and end of text.
+    :param inFilename:
+    :param outFilename:
+    :return:
+    """
+    loadGnomeData(inFilename)
+    with open(outFilename,'wt') as outfile:
+        for conv in conversations:
+            outfile.write("<SOC>\n") #start of conversation
+            lastSpeaker = ""
+            currentText=""
+            for cvl in conv:
+                if (cvl.speaker!=lastSpeaker):
+                    if len(currentText)>0:
+                        #need to condition text here
+                        #currentText = conditionText(currentText)
+                        outfile.write("<SOT> "+currentText.strip()+" <EOT> \n") #Start of text and end of text
+                        currentText=""
+                currentText = currentText+" "+cvl.text
+                lastSpeaker=cvl.speaker
+            #don't forget to write out the last line if it's still in currentText
+            if len(currentText)>0:
+                outfile.write("<SOT> " + currentText.strip() + " <EOT> \n")  # Start of text and end of text
+            outfile.write("<EOC>\n") #end of conversation
 
 ######################################################################################################
 
@@ -294,8 +328,8 @@ def trainChatbot(model,inFilename):
 
     #print("Found ",len(data.keys())," chatbot contexts")
 
-    print("Begin training")
-    seq2seq = Seq2Seq()
+    #print("Begin training")
+    #seq2seq = s2s.Seq2Seq()
     text = ('long ago , the mice had a general council to consider what measures they could take to outwit their '
     'common enemy , the cat . some said this , and some said that but at last a young mouse got up and said he had '
     'a proposal to make , which he thought would meet the case . you will all agree , said he , that our chief danger '
@@ -306,7 +340,18 @@ def trainChatbot(model,inFilename):
     ', until an old mouse got up and said that is all very well , but who is to bell the cat ? the mice looked at one '
     'another and nobody spoke . then the old mouse said it is easy to propose impossible remedies .')
     #seq2seq.trainLMTest(text.split()) #note words passed in are an array of words
-    seq2seq.trainLMEmbedding(model, text.split())
+    #s2s.test_trainLMEmbedding(model, text.split())
+
+    #train_data, valid_data, test_data, vocabulary, reversed_dictionary = load_data()
+    #training data needs a list of words as word ids, for which we need a dictionary of words
+    words = s2s.readWords("lm\\clean_gnomechat.txt") #returns list of individual words from the cleaned chat file
+    dictionary, reversed_dictionary = s2s.buildDictionary(words) #returns word->id and id->word dictionaries
+    s2s.saveWordDictionaryTSV(reversed_dictionary,"lm\\rdictionary.csv")
+    word_ids = s2s.wordsToWordIds(words,dictionary) #having got a word->id lookup, convert all the words
+    print("Loaded word file: ",len(words), " words in chat file, ",len(dictionary)," words in dictionary")
+    print("Begin training")
+    s2s.trainLMAdvanced(word_ids, len(dictionary), num_layers=2, num_epochs=60, batch_size=20, print_iter=10,
+          model_save_name='two-layer-lstm-medium-config-60-epoch-0p93-lr-decay-10-max-lr')
 
 
 
@@ -319,6 +364,15 @@ def main():
     infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171101_conversations\\conversations_sep.csv"
     ##
 
+    #load the gnome data and write out all user response lines as plain text
+    #loadGnomeData(infilename)
+    #for conv in conversations:
+    #    for cvl in conv:
+    #        if not cvl.speaker in creatureNames:
+    #            print(cvl.speaker,",\"",cvl.text,"\"")
+    #        #print(cvl.speaker, ",\"", cvl.text, "\"")
+
+    conditionGnomeChat(infilename,"lm/clean_gnomechat.txt")
 
     ##
 
