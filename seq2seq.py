@@ -3,6 +3,7 @@ import random
 import time
 import collections
 import datetime as dt
+import csv
 
 import numpy as np
 import tensorflow as tf
@@ -70,6 +71,28 @@ def saveWordDictionaryTSV(reverse_dictionary,outFilename):
             k2 = k.encode("ascii","replace").decode("utf-8")
             f.write("\""+k2+"\"\t"+str(i)+"\n")
 
+
+######################################################################################################
+
+def loadWordDictionaryTSV(inFilename):
+    """
+    Load a word dictionary as a tsv file (tab separated), which is what the tensorboard needs.
+    NOTE: this returns a reverse dictionary i.e. wordid to word string lookup
+    NOTE2: this would almost load a forward word dictionary as it just reads in the key,value pairs from the csv lines
+    EXCEPT for the fact that it converts the dictionary value to an integer
+    :param inFilename: filename containing the data
+    :return:
+    """
+    reverse_dictionary = dict()
+    with open(inFilename, 'rt') as f:
+        reader = csv.reader(f, delimiter='\t', quotechar='"')
+        next(reader) #skip header row which isn't detected as it's TSV format
+        for row in reader:
+            word = row[0]
+            wordid = int(row[1])
+            reverse_dictionary[wordid]=word
+            print(word,wordid)
+    return reverse_dictionary
 
 ######################################################################################################
 
@@ -656,42 +679,48 @@ def trainLMAdvanced(idwords, vocabulary_size, num_layers, num_epochs, batch_size
 ######################################################################################################
 
 # load a previously trained model and test it
-def testLMAdvanced(model_path, idwords, reversed_dictionary):
+def testLMAdvanced(model_path, idwords, dictionary, reversed_dictionary, inputText):
+    """
+    Inject inputText into the model and see what the output is.
+    TODO: we don't strictly need idwords, except for the fact that the training input is in the Seq2Seq constructor.
+    It would be good to remove this, but it's tricky.
+    :param model_path: Location of where a train version of the model is stored.
+    :param idwords: tokensied version of the input corpus (is this needed?)
+    :param dictionary: word -> id lookup so we can convert inputText into symbols
+    :param reversed_dictionary: id -> word lookup so we can convert the output back into real words
+    :param inputText: plain text input to the model which we are testing
+    :return:
+    """
     logs_path="rnn_words"
     #test_input = Input(batch_size=20, num_steps=35, data=test_data)
+    #All this MUST match the parameters that it was trained with, otherwise bad things will happen
+    num_words = len(reversed_dictionary.keys())
     training_input = DataProvider(batch_size=20, num_steps=35, data=idwords)
-    m = Seq2Seq(training_input, is_training=False, hidden_size=650, vocab_size=vocabulary, num_layers=2)
+    m = Seq2Seq(training_input, is_training=False, hidden_size=650, vocab_size=num_words, num_layers=2)
     saver = tf.train.Saver()
-    with tf.Session() as sess:
-        # start threads
+    with tf.Session() as session:
+        # start threads queue - it won't work if you don't do this
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
-        current_state = np.zeros((2, 2, m.batch_size, m.hidden_size))
-        # restore the trained model
-        saver.restore(sess, model_path)
-        # get an average accuracy over num_acc_batches
-        num_acc_batches = 30
-        check_batch_idx = 25
-        acc_check_thresh = 5
-        accuracy = 0
-        for batch in range(num_acc_batches):
-            if batch == check_batch_idx:
-                true_vals, pred, current_state, acc = sess.run(
-                    [m.input_obj.targets, m.predict, m.state, m.accuracy],
-                    feed_dict={m.init_state: current_state})
-                pred_string = [reversed_dictionary[x] for x in pred[:m.num_steps]]
-                true_vals_string = [reversed_dictionary[x] for x in true_vals[0]]
-                print("True values (1st line) vs predicted values (2nd line):")
-                print(" ".join(true_vals_string))
-                print(" ".join(pred_string))
-            else:
-                acc, current_state = sess.run([m.accuracy, m.state], feed_dict={m.init_state: current_state})
-            if batch >= acc_check_thresh:
-                accuracy += acc
-        print("Average accuracy: {:.3f}".format(accuracy / (num_acc_batches - acc_check_thresh)))
-        # close threads
+        #load weights from the previous training session
+        saver.restore(session, model_path)
+        state = np.zeros((m.num_layers,2,m.batch_size,m.hidden_size))
+        true_vals, pred, state, acc = session.run(
+            [m.input_obj.targets, m.predict, m.state, m.accuracy],
+            feed_dict={m.init_state: state}
+        )
+        #print("finished onehot=",onehot)
+        #print("finished pred=", pred)
+        print("shape(true_vals)=",true_vals.shape) #20,35
+        print("shape(pred)=", pred.shape) #700
+        pred_string = [reversed_dictionary[x] for x in pred[:m.num_steps]]
+        true_vals_string = [reversed_dictionary[x] for x in true_vals[0]]
+        print("True values (1st line) vs predicted values (2nd line):")
+        print(" ".join(true_vals_string))
+        print(" ".join(pred_string))
         coord.request_stop()
         coord.join(threads)
+
 
 
 

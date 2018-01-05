@@ -353,6 +353,17 @@ def trainChatbot(model,inFilename):
     s2s.trainLMAdvanced(word_ids, len(dictionary), num_layers=2, num_epochs=60, batch_size=20, print_iter=10,
           model_save_name='two-layer-lstm-medium-config-60-epoch-0p93-lr-decay-10-max-lr')
 
+def testChatbot():
+    #don't strictly need the corpus text, except for the fact that it's in the Seq2Seq constructor - need to remove this.
+    words = s2s.readWords("lm\\clean_gnomechat.txt")  # returns list of individual words from the cleaned chat file
+    inputText = "hello"
+    model_path="rnn_words\\two-layer-lstm-medium-config-60-epoch-0p93-lr-decay-10-max-lr-final"
+    reversed_dictionary = s2s.loadWordDictionaryTSV("lm\\rdictionary.csv")
+    print("reversed_dictionary words=",len(reversed_dictionary.keys()))
+    dictionary = dict([[v, k] for k, v in reversed_dictionary.items()]) #reversed reverse dictionary
+    word_ids = s2s.wordsToWordIds(words, dictionary)  # having got a word->id lookup, convert all the words
+    s2s.testLMAdvanced(model_path, word_ids, dictionary, reversed_dictionary, inputText)
+
 
 
 ###############################################################################
@@ -381,7 +392,8 @@ def main():
 
     #Training
     model = gs.models.Word2Vec.load('lm/gensim-text8.model')
-    trainChatbot(model,'lm/trainingchat.csv')
+    #trainChatbot(model,'lm/trainingchat.csv')
+    testChatbot()
 
 
 
