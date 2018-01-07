@@ -69,7 +69,7 @@ def saveWordDictionaryTSV(reverse_dictionary,outFilename):
         for i in range(0,len(reverse_dictionary.keys())):
             k = reverse_dictionary[i]
             k2 = k.encode("ascii","replace").decode("utf-8")
-            f.write("\""+k2+"\"\t"+str(i)+"\n")
+            f.write(""+k2+"\t"+str(i)+"\n")
 
 
 ######################################################################################################
@@ -91,7 +91,7 @@ def loadWordDictionaryTSV(inFilename):
             word = row[0]
             wordid = int(row[1])
             reverse_dictionary[wordid]=word
-            print(word,wordid)
+            #print(word,wordid)
     return reverse_dictionary
 
 ######################################################################################################
@@ -679,7 +679,7 @@ def trainLMAdvanced(idwords, vocabulary_size, num_layers, num_epochs, batch_size
 ######################################################################################################
 
 # load a previously trained model and test it
-def testLMAdvanced(model_path, idwords, dictionary, reversed_dictionary, inputText):
+def testLMAdvanced(model_path, idwords, dictionary, reversed_dictionary):
     """
     Inject inputText into the model and see what the output is.
     TODO: we don't strictly need idwords, except for the fact that the training input is in the Seq2Seq constructor.
@@ -720,6 +720,36 @@ def testLMAdvanced(model_path, idwords, dictionary, reversed_dictionary, inputTe
         print(" ".join(pred_string))
         coord.request_stop()
         coord.join(threads)
+
+    #with tf.Session() as sess:
+    #    # start threads
+    #    coord = tf.train.Coordinator()
+    #    threads = tf.train.start_queue_runners(coord=coord)
+    #    current_state = np.zeros((2, 2, m.batch_size, m.hidden_size))
+    #    # restore the trained model
+    #    saver.restore(sess, model_path)
+    #    # get an average accuracy over num_acc_batches
+    #    num_acc_batches = 8 #30
+    #    check_batch_idx = 5 #25
+    #    acc_check_thresh = 5
+    #    accuracy = 0
+    #    for batch in range(num_acc_batches):
+    #        if batch == check_batch_idx:
+    #            true_vals, pred, current_state, acc = sess.run([m.input_obj.targets, m.predict, m.state, m.accuracy],
+    #                                                           feed_dict={m.init_state: current_state})
+    #            pred_string = [reversed_dictionary[x] for x in pred[:m.num_steps]]
+    #            true_vals_string = [reversed_dictionary[x] for x in true_vals[0]]
+    #            print("True values (1st line) vs predicted values (2nd line):")
+    #            print(" ".join(true_vals_string))
+    #            print(" ".join(pred_string))
+    #        else:
+    #            acc, current_state = sess.run([m.accuracy, m.state], feed_dict={m.init_state: current_state})
+    #        if batch >= acc_check_thresh:
+    #            accuracy += acc
+    #    print("Average accuracy: {:.3f}".format(accuracy / (num_acc_batches - acc_check_thresh)))
+    #    # close threads
+    #    coord.request_stop()
+    #    coord.join(threads)
 
 
 

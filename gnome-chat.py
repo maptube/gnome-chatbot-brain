@@ -175,7 +175,24 @@ def compute_unigramProbabilities(wordcount):
 
 
 ######################################################################################################
-
+def conditionText(text):
+    #Make text lowercase
+    #Quote and comma give problems with loading and saving words, so make them into special symbols.
+    #For other symbols, just make sure they have separating spaces
+    #TODO: a better way of doing this might be to split into words, then you could filter this: 'single quoted text'
+    text = text.encode("ascii", "replace").decode("utf-8") # I want plain old ascii, not utf-8
+    text = text.lower()
+    text = text.replace("\"", " <QUOTE> ")
+    text = text.replace(",", " <COMMA> ")
+    text = text.replace("!", " ! ")
+    text = text.replace("?", " ? ")
+    text = text.replace(".", " . ")
+    text = text.replace(":", " : ")
+    text = text.replace(";", " : ")
+    #text = text.replace('`', '\'') #solves an encoding problem
+    text = text.replace("  ", " ") #now that is a real hack! replace any double spaces we just introduced with a single one!
+    text = text.replace("  ", " ") #and again!
+    return text
 
 def conditionGnomeChat(inFilename, outFilename):
     """
@@ -190,22 +207,22 @@ def conditionGnomeChat(inFilename, outFilename):
     loadGnomeData(inFilename)
     with open(outFilename,'wt') as outfile:
         for conv in conversations:
-            outfile.write("<SOC>\n") #start of conversation
+            #outfile.write("<SOC>\n") #start of conversation
             lastSpeaker = ""
             currentText=""
             for cvl in conv:
                 if (cvl.speaker!=lastSpeaker):
                     if len(currentText)>0:
-                        #need to condition text here
-                        #currentText = conditionText(currentText)
-                        outfile.write("<SOT> "+currentText.strip()+" <EOT> \n") #Start of text and end of text
+                        #outfile.write("<SOT> "+currentText.strip()+" <EOT> \n") #Start of text and end of text
+                        outfile.write(currentText.strip() + " <EOT> \n")  # Start of text and end of text
                         currentText=""
-                currentText = currentText+" "+cvl.text
+                currentText = currentText+" "+conditionText(cvl.text)
                 lastSpeaker=cvl.speaker
             #don't forget to write out the last line if it's still in currentText
             if len(currentText)>0:
-                outfile.write("<SOT> " + currentText.strip() + " <EOT> \n")  # Start of text and end of text
-            outfile.write("<EOC>\n") #end of conversation
+                #outfile.write("<SOT> " + currentText.strip() + " <EOT> \n")  # Start of text and end of text
+                outfile.write(currentText.strip() + " <EOT> \n")  # Start of text and end of text
+            #outfile.write("<EOC>\n") #end of conversation
 
 ######################################################################################################
 
@@ -307,7 +324,7 @@ def trainWordEmbeddings(outFilename):
 
     return model
 
-def trainChatbot(model,inFilename):
+def trainChatbot():
     """Train a chatbot using a word embedding and a file containing [context, "pattern"] tuples"""
     #model is a gensim word2vec model with 100 vector words
     #inFile:
@@ -356,13 +373,18 @@ def trainChatbot(model,inFilename):
 def testChatbot():
     #don't strictly need the corpus text, except for the fact that it's in the Seq2Seq constructor - need to remove this.
     words = s2s.readWords("lm\\clean_gnomechat.txt")  # returns list of individual words from the cleaned chat file
-    inputText = "hello"
+    #inputText = "loki ! ! speak to me !  loki ! ! speak to me !  hello <EOT>"
+    #words=[]
+    #for i in range(0,1000):
+    #    words = words + inputText.split()
+    print("word length = ", len(words))
     model_path="rnn_words\\two-layer-lstm-medium-config-60-epoch-0p93-lr-decay-10-max-lr-final"
     reversed_dictionary = s2s.loadWordDictionaryTSV("lm\\rdictionary.csv")
     print("reversed_dictionary words=",len(reversed_dictionary.keys()))
     dictionary = dict([[v, k] for k, v in reversed_dictionary.items()]) #reversed reverse dictionary
     word_ids = s2s.wordsToWordIds(words, dictionary)  # having got a word->id lookup, convert all the words
-    s2s.testLMAdvanced(model_path, word_ids, dictionary, reversed_dictionary, inputText)
+    print("words ids=",word_ids)
+    s2s.testLMAdvanced(model_path, word_ids, dictionary, reversed_dictionary)
 
 
 
@@ -372,34 +394,40 @@ def main():
     #infilename = "C:\\Users\\richard\\Desktop\\Gnomes\\SIGCHI\\gnome-data\\conversations.csv"
     #infilename = "C:\\Users\\richard\\Desktop\\SIGCHI\\gnomes-data\\20170911_conversations\\conversations_sep.csv"
     #infilename = "C:\\Users\\richard\\Dropbox\\SIGCHI\\conversations.csv"
-    infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171101_conversations\\conversations_sep.csv"
+    #infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171101_conversations\\conversations_sep.csv"
+    infilename = "gnomes-data\\20171101_conversations\\conversations_sep.csv"
     ##
 
     #load the gnome data and write out all user response lines as plain text
-    #loadGnomeData(infilename)
-    #for conv in conversations:
-    #    for cvl in conv:
-    #        if not cvl.speaker in creatureNames:
-    #            print(cvl.speaker,",\"",cvl.text,"\"")
+    loadGnomeData(infilename)
+    for conv in conversations:
+        for cvl in conv:
+            if not cvl.speaker in creatureNames:
+                words = cvl.text.split()
+                print(cvl.speaker,",",len(words),",\"",cvl.text,"\"",) #print sentence and number of words
     #        #print(cvl.speaker, ",\"", cvl.text, "\"")
 
-    conditionGnomeChat(infilename,"lm/clean_gnomechat.txt")
+    #conditionGnomeChat(infilename,"lm/clean_gnomechat.txt")
 
     ##
 
     #Train the language model on words - this is using the text8 corpus
     #model = trainWordEmbeddings('lm/gensim-text8.model')
+    #we = WordEmbeddings()
+    #model = we.gensimWord2Vec(['lm/clean_gnomechat.txt'])
+    #print("model generated")
+    #model = gs.models.Word2Vec.load('lm/gensim-text8.model')
+    #print("arcelormittal, ?: ", model.wv.most_similar_cosmul(positive=['arcelormittal']))
+    #print("place, ?: ", model.wv.most_similar_cosmul(positive=['place']))
+    #print("duck, ?: ", model.wv.most_similar_cosmul(positive=['duck']))
+    #model.wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man'])
+    #print("score", model.score(['hello gnome'.split()]))
+
 
     #Training
-    model = gs.models.Word2Vec.load('lm/gensim-text8.model')
-    #trainChatbot(model,'lm/trainingchat.csv')
+    #model = gs.models.Word2Vec.load('lm/gensim-text8.model')
+    #trainChatbot()
     testChatbot()
-
-
-
-
-
-
 
 
 

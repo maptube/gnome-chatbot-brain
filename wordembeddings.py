@@ -92,7 +92,7 @@ class WordEmbeddings:
 
     # pylint: disable=missing-docstring
     # Function to draw visualization of distance between embeddings.
-    def plot_with_labels(low_dim_embs, labels, filename):
+    def plot_with_labels(self,low_dim_embs, labels, filename):
         assert low_dim_embs.shape[0] >= len(labels), 'More labels than embeddings'
         plt.figure(figsize=(36, 36))  # in inches
         for i, label in enumerate(labels):
@@ -168,7 +168,8 @@ class WordEmbeddings:
             print(i, random.choice(sentences))
         # sg=0 CBOW, sg=1 Skip gram, hs=1 use softmax, iter=number of iterations (epochs)
         # window is number of words in skipgram, min_count drops words less than this as too infrequent for analysis
-        model = gs.models.Word2Vec(sentences, size=100, window=5, min_count=5, workers=8, sg=1, hs=1, iter=15)
+        #min_count was 5 - lowered for gnome corpus
+        model = gs.models.Word2Vec(sentences, size=100, window=5, min_count=2, workers=8, sg=1, hs=1, iter=15)
         # print("model computer: ",model["computer"])
         # model.save(fname)
         # model = Word2Vec.load(fname)  # you can continue training with the loaded model!
@@ -176,11 +177,13 @@ class WordEmbeddings:
         # plot word embeddings using t-SNE view in 2D
         vocab = list(model.wv.vocab)  # list of words in the vocabulary so we can get them in the right order
         embeds = model[vocab]  # list of word embedding vectors
+        print('gensim word2vec vocabulary size=',len(vocab))
         # check they're in the same order
         # print('check embed ordering is correct')
         # print(labels[0],'=',embeds[0])
         # print(labels[0],'=',model[labels[0]])
-        plot_only = 500
+        #plot_only = 500
+        plot_only=100 #had to make this smaller for the gnome corpus
         tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=5000, method='exact')
         low_dim_embeds = tsne.fit_transform(embeds[:plot_only, :])
         labels = [vocab[i] for i in range(0, plot_only)]
