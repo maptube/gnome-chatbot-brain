@@ -71,7 +71,8 @@ def loadGnomeData(infile):
     :param infile:
     :return:
     """
-    with open(infile, 'rt') as csvfile:
+    conversations.clear()
+    with open(infile, 'rt', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         next(reader) #skip header
         lastcid = -1
@@ -284,6 +285,56 @@ def makeWordFile(infiles,outfile):
 
 ######################################################################################################
 
+def computeSentenceLengths(inFilename,outFilename):
+    """
+    Processing for beginning half of sentence length structure against end sentence length structure.
+    Only acts on visitor conversations.
+    This is a test for whether the sentence structure breaks down as the conversation goes on i.e. as they realise
+    they're talking to a mechanism, the language gets simpler. If, however, they leave a memory at the end, then the
+    memories tend to be longer (as they're being told), so the second half of the conversation will have more words.
+    That's the hypothesis anyway...
+    :param inFilename: location of the gnome text corpus
+    :param outFilename: file to write out containing the data
+    :return:
+    """
+    loadGnomeData(inFilename)
+    print("computeSentenceLengths::loaded ",len(conversations)," conversations")
+    with open(outFilename, 'wt', encoding='utf-8') as outfile:
+        outfile.write("cid,speaker,lines,totalwords,firsthalf,secondhalf,bagofwords\n")
+        for conv in conversations:
+            wordlens = []
+            wordbag = []
+            lines = 0 #number of visitor conversation lines
+            totalWords = 0 #total number of words spoken by visitor in this conversation
+            speaker = ''
+            cid = 0
+            for cvl in conv:
+                if cvl.speaker not in creatureNames:
+                    speaker=cvl.speaker
+                    cid=cvl.cid
+                    lines=lines+1
+                    words = cvl.text.split()
+                    wordlens.append(len(words))
+                    wordbag=wordbag + words
+                    totalWords=totalWords+len(words)
+                    firstHalf=0 #total words in first half of conversation
+                    secondHalf=0 #total words in second half of conversation
+                    i=0
+                    j=len(wordlens)-1
+                    while (i<=j):
+                        if i==j: #edge case, if conv lines are odd, then split the middle conversation length in half
+                            firstHalf = firstHalf + wordlens[i]/2
+                            secondHalf = secondHalf + wordlens[j]/2
+                        else:
+                            firstHalf=firstHalf+wordlens[i]
+                            secondHalf=secondHalf+wordlens[j]
+                        i=i+1
+                        j=j-1
+
+            outfile.write(cid+","+speaker+","+str(lines)+","+str(totalWords)+","+str(firstHalf)+","+str(secondHalf)+","+" ".join(wordbag)+"\n")
+
+
+######################################################################################################
 
 def trainWordEmbeddings(outFilename):
     """train a word vector embedding which we save for later"""
@@ -395,7 +446,8 @@ def main():
     #infilename = "C:\\Users\\richard\\Desktop\\SIGCHI\\gnomes-data\\20170911_conversations\\conversations_sep.csv"
     #infilename = "C:\\Users\\richard\\Dropbox\\SIGCHI\\conversations.csv"
     #infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171101_conversations\\conversations_sep.csv"
-    infilename = "gnomes-data\\20171101_conversations\\conversations_sep.csv"
+    #infilename = "gnomes-data\\20171101_conversations\\conversations_sep.csv"
+    infilename = "gnomes-data\\20171214_conversations\\conversations_sep.csv"
     ##
 
     #load the gnome data and write out all user response lines as plain text
@@ -408,6 +460,8 @@ def main():
     #        #print(cvl.speaker, ",\"", cvl.text, "\"")
 
     #conditionGnomeChat(infilename,"lm/clean_gnomechat.txt")
+
+    computeSentenceLengths(infilename, "lm\\firstHalfSecondHalf.csv")
 
     ##
 
@@ -427,7 +481,7 @@ def main():
     #Training
     #model = gs.models.Word2Vec.load('lm/gensim-text8.model')
     #trainChatbot()
-    testChatbot()
+    #testChatbot()
 
 
 
