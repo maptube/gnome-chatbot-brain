@@ -17,7 +17,8 @@ import zipfile
 import collections
 from six.moves import xrange
 import multiprocessing
-from gensim.corpora.wikicorpus import WikiCorpus
+#from gensim.corpora.wikicorpus import WikiCorpus
+import gensim as gs
 
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
@@ -333,6 +334,51 @@ def computeSentenceLengths(inFilename,outFilename):
 
             outfile.write(cid+","+speaker+","+str(lines)+","+str(totalWords)+","+str(firstHalf)+","+str(secondHalf)+","+" ".join(wordbag)+"\n")
 
+######################################################################################################
+
+def textProbability(modelText8, modelPark, inFilename, outFilename):
+    """
+    Compute word probabilities based on various text models
+    :param inFilename:
+    :param outFilename:
+    :return:
+    """
+    loadGnomeData(inFilename)
+    print("textProbability::loaded ", len(conversations), " conversations")
+    #embeds = WordEmbeddings()
+    #modelText8 = embeds.makeText8Embedding()
+    #modelText8 = gs.models.Word2Vec.load('lm/gensim-text8.model')
+    #print("text8 score: hello there my name is fred")
+    #score = modelText8.score([["hello", "there", "everybody"]])
+    #print("score=",score)
+    with open(outFilename, 'wt', encoding='utf-8') as outfile:
+        outfile.write("cid,speaker,lines,totalwords,probText8,probPark,bagofwords\n")
+        for conv in conversations:
+            wordlens = []
+            wordbag = []
+            lines = 0  # number of visitor conversation lines
+            totalWords = 0  # total number of words spoken by visitor in this conversation
+            speaker = ''
+            cid = 0
+            for cvl in conv:
+                if cvl.speaker not in creatureNames:
+                    speaker = cvl.speaker
+                    cid = cvl.cid
+                    lines = lines + 1
+                    words = cvl.text.split()
+                    wordlens.append(len(words))
+                    wordbag = wordbag + words
+                    totalWords = totalWords + len(words)
+                    probText8 = modelText8.score([words]) #yes, it's a list of bags of words
+                    probPark = modelPark.score([words])
+            outfile.write(
+                cid + "," + speaker + ","
+                + str(lines) + "," + str(totalWords) + ","
+                + str(probText8[0]) + ","
+                + str(probPark[0]) + ","
+                + " ".join(wordbag)
+                + "\n")
+
 
 ######################################################################################################
 
@@ -447,8 +493,17 @@ def main():
     #infilename = "C:\\Users\\richard\\Dropbox\\SIGCHI\\conversations.csv"
     #infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171101_conversations\\conversations_sep.csv"
     #infilename = "gnomes-data\\20171101_conversations\\conversations_sep.csv"
-    infilename = "gnomes-data\\20171214_conversations\\conversations_sep.csv"
+    #infilename = "gnomes-data\\20171214_conversations\\conversations_sep.csv"
+    infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171214_conversations\\conversations_sep.csv"
     ##
+
+    #only run once code to create the word embedding vector files that we're using here
+    #directories are hard coded in to be lm/filename.model
+    we = WordEmbeddings()
+    #text8 = we.makeText8Embedding()
+    #text8.save('lm/gensim-text8.model')
+    #park = we.makeParkTextEmbedding()
+    #park.save('lm/gensim-park.model')
 
     #load the gnome data and write out all user response lines as plain text
     loadGnomeData(infilename)
@@ -459,9 +514,14 @@ def main():
                 print(cvl.speaker,",",len(words),",\"",cvl.text,"\"",) #print sentence and number of words
     #        #print(cvl.speaker, ",\"", cvl.text, "\"")
 
-    #conditionGnomeChat(infilename,"lm/clean_gnomechat.txt")
+    conditionGnomeChat(infilename,"lm/clean_gnomechat.txt")
 
     computeSentenceLengths(infilename, "lm\\firstHalfSecondHalf.csv")
+
+    # modelText8 = embeds.makeText8Embedding()
+    modelText8 = gs.models.Word2Vec.load('lm/gensim-text8.model')
+    modelPark = gs.models.Word2Vec.load('lm/gensim-park.model')
+    textProbability(modelText8, modelPark, infilename, "lm\\gensim-text8-textProbability.csv")
 
     ##
 
@@ -480,7 +540,7 @@ def main():
 
     #Training
     #model = gs.models.Word2Vec.load('lm/gensim-text8.model')
-    #trainChatbot()
+    trainChatbot()
     #testChatbot()
 
 

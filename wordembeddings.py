@@ -87,6 +87,19 @@ class WordEmbeddings:
         model = gs.models.Word2Vec(text8, size=100, window=5, min_count=5, workers=8, sg=1, hs=1, iter=5)
         return model
 
+    def makeParkTextEmbedding(self):
+        # gensim park embedding
+        # This uses the cleaned chat file that's also used by the RNN model.
+        with open('lm/clean_gnomechat.txt', 'rt') as f:
+            text = f.read()
+        sentences = text.split('\n')
+        for i in range(0,len(sentences)):
+            sentences[i] = sentences[i].split()
+        #note the lower bound of 1 word for min_count below
+        model = gs.models.Word2Vec(sentences, size=100, window=5, min_count=1, workers=8, sg=1, hs=1, iter=5)
+        return model
+
+
     ######################################################################################################
     # PLOTTING for gensim and TF word2vec
 
