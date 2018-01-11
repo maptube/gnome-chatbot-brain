@@ -336,6 +336,33 @@ def computeSentenceLengths(inFilename,outFilename):
 
 ######################################################################################################
 
+def maxCloseness(model,patternWords,words):
+    """
+    Test closeness of "words" to "patternWords" i.e. given pattern=["hello", "gnome"] and words=["hello", "there", "gnome", ",", "my", "name" "is"]
+    then you should get a closeness match on hello and gnome, so it returns the maximum.
+    :param model: The text model containing the word embedding vectors to use.
+    :param patternWords: The pattern that we're matching against as a list of words i.e. ["hello", "hi", "hiya"] to match a hello context.
+    :param words: List of plain text words that we're matching against.
+    :return: The minimum closeness value of the pattern words applied over the text.
+    TODO: isn't closeness commutative? i.e. the nested loops should be triangluar?
+    """
+    cosmax=-1 #it's cosine closeness, 1 means close (zero angle)
+    cosword="NONE"
+    for word1 in patternWords:
+        word1 = word1.lower()
+        for word2 in words:
+            word2 = word2.lower()
+            #need to check word is in the vocabulary, otherwise you get an error
+            if word1 in model.wv.vocab and word2 in model.wv.vocab:
+                val = model.wv.similarity(word1,word2)
+                if (val>cosmax):
+                    cosmax=val
+                    cosword=word2
+    return cosmax, cosword
+
+######################################################################################################
+
+
 def textProbability(modelText8, modelPark, inFilename, outFilename):
     """
     Compute word probabilities based on various text models
@@ -351,8 +378,9 @@ def textProbability(modelText8, modelPark, inFilename, outFilename):
     #print("text8 score: hello there my name is fred")
     #score = modelText8.score([["hello", "there", "everybody"]])
     #print("score=",score)
+    #print("closeness: ",modelText8.wv.similarity("i","am"))
     with open(outFilename, 'wt', encoding='utf-8') as outfile:
-        outfile.write("cid,speaker,lines,totalwords,probText8,probPark,bagofwords\n")
+        outfile.write("cid,speaker,lines,totalwords,probText8,probPark,probPersonal,probMonth,bagofwords\n")
         for conv in conversations:
             wordlens = []
             wordbag = []
@@ -371,11 +399,16 @@ def textProbability(modelText8, modelPark, inFilename, outFilename):
                     totalWords = totalWords + len(words)
                     probText8 = modelText8.score([words]) #yes, it's a list of bags of words
                     probPark = modelPark.score([words])
+                    probPersonal, personalWord = maxCloseness(modelText8,["i","he","she","it","they","we"],words)
+                    probMonth, monthWord = maxCloseness(modelText8,
+                            ["january","february","march","april","may","june","july","august","september","october","november","december"],words)
             outfile.write(
                 cid + "," + speaker + ","
                 + str(lines) + "," + str(totalWords) + ","
                 + str(probText8[0]) + ","
                 + str(probPark[0]) + ","
+                + str(probPersonal) + ","
+                + str(probMonth) + "," + monthWord + ","
                 + " ".join(wordbag)
                 + "\n")
 
@@ -493,13 +526,13 @@ def main():
     #infilename = "C:\\Users\\richard\\Dropbox\\SIGCHI\\conversations.csv"
     #infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171101_conversations\\conversations_sep.csv"
     #infilename = "gnomes-data\\20171101_conversations\\conversations_sep.csv"
-    #infilename = "gnomes-data\\20171214_conversations\\conversations_sep.csv"
-    infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171214_conversations\\conversations_sep.csv"
+    infilename = "gnomes-data\\20171214_conversations\\conversations_sep.csv"
+    #infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171214_conversations\\conversations_sep.csv"
     ##
 
     #only run once code to create the word embedding vector files that we're using here
     #directories are hard coded in to be lm/filename.model
-    we = WordEmbeddings()
+    #we = WordEmbeddings()
     #text8 = we.makeText8Embedding()
     #text8.save('lm/gensim-text8.model')
     #park = we.makeParkTextEmbedding()
