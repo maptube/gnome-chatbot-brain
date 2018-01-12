@@ -353,7 +353,7 @@ def maxCloseness(model,patternWords,words):
         for word2 in words:
             word2 = word2.lower()
             #need to check word is in the vocabulary, otherwise you get an error
-            if word1 in model.wv.vocab and word2 in model.wv.vocab:
+            if word1 in model.wv.vocab and word2 in model.wv.vocab and word2 != 'hello':
                 val = model.wv.similarity(word1,word2)
                 if (val>cosmax):
                     cosmax=val
@@ -380,7 +380,7 @@ def textProbability(modelText8, modelPark, inFilename, outFilename):
     #print("score=",score)
     #print("closeness: ",modelText8.wv.similarity("i","am"))
     with open(outFilename, 'wt', encoding='utf-8') as outfile:
-        outfile.write("cid,speaker,lines,totalwords,probText8,probPark,probPersonal,probMonth,bagofwords\n")
+        outfile.write("cid,speaker,lines,totalwords,probText8,probPark,probPersonal,personalWord,probMonth,monthWord,bagofwords\n")
         for conv in conversations:
             wordlens = []
             wordbag = []
@@ -407,7 +407,7 @@ def textProbability(modelText8, modelPark, inFilename, outFilename):
                 + str(lines) + "," + str(totalWords) + ","
                 + str(probText8[0]) + ","
                 + str(probPark[0]) + ","
-                + str(probPersonal) + ","
+                + str(probPersonal) + "," + personalWord + ","
                 + str(probMonth) + "," + monthWord + ","
                 + " ".join(wordbag)
                 + "\n")
@@ -526,8 +526,8 @@ def main():
     #infilename = "C:\\Users\\richard\\Dropbox\\SIGCHI\\conversations.csv"
     #infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171101_conversations\\conversations_sep.csv"
     #infilename = "gnomes-data\\20171101_conversations\\conversations_sep.csv"
-    infilename = "gnomes-data\\20171214_conversations\\conversations_sep.csv"
-    #infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171214_conversations\\conversations_sep.csv"
+    #infilename = "gnomes-data\\20171214_conversations\\conversations_sep.csv"
+    infilename = "C:\\Users\\richard\\Desktop\\gnomes-data\\20171214_conversations\\conversations_sep.csv"
     ##
 
     #only run once code to create the word embedding vector files that we're using here
